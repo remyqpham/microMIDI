@@ -1,8 +1,8 @@
-/* Encoder Library - Basic Example
- * http://www.pjrc.com/teensy/td_libs_Encoder.html
- *
- * This example code is in the public domain.
+/* microMIDI 1.0
+ * Remy Pham
+ * Patrick Ayers
  */
+
 #include "Adafruit_TLC59711.h"
 #include "MIDIUSB.h"
 
@@ -10,13 +10,21 @@
 #include <SPI.h>
 
 #define NUM_TLC59711 1
+#define NUM_BUTTONS 4
 
 #define data 16
 #define clock 15
 
-const int ButtonPin = 9;
+const int ButtonPin = 9; //lil button
+const int EncoderPin1 = 8;//encoder 1
+const int EncoderPin2 = 7;//encoder 2
+const int EncoderPin3 = 6;//encoder 3
 
 int buttonState = 0;
+int encoder1ButtonState = 0;
+int encoder2ButtonState = 0;
+int encoder3ButtonState = 0;
+
 
 Adafruit_TLC59711 tlc = Adafruit_TLC59711(1, clock, data);
 
@@ -34,28 +42,34 @@ long oldPositionA  = -999;
 long oldPositionB  = -999;
 long oldPositionC  = -999;
 
-long oldTime = 0;
-long newTime = 0;
-int noteSend=0;
+long oldTime[NUM_BUTTONS];
+long newTime[NUM_BUTTONS];
+uint8_t noteSend [NUM_BUTTONS] ;
 
 void setup() {
+  //Setting up the MIDI baud rate
   Serial.begin(115200);
-  Serial.println("Basic Encoder Test:");
 
-  oldTime = millis();
-  noteSend=0;
+  for(int i=0; i<NUM_BUTTONS; i++){
+    noteSend[i]=newTime[i]=0;
+    oldTime[i] = millis();
+  }
+
 
   pinMode(ButtonPin, INPUT);
+  pinMode(EncoderPin1, INPUT);
+  pinMode(EncoderPin2, INPUT);
+  pinMode(EncoderPin3, INPUT);
   tlc.begin();
   tlc.write();
 }
 
-
-
-
 void loop() {
   
   buttonState = digitalRead(ButtonPin);
+  encoder1ButtonState = digitalRead(EncoderPin1);
+  encoder2ButtonState = digitalRead(EncoderPin2);
+  encoder3ButtonState = digitalRead(EncoderPin3);
    
   long newPositionA = myEncA.read();
   long newPositionB = myEncB.read();
@@ -81,23 +95,82 @@ void loop() {
 
 
   //MIDI
-  newTime = millis();
+  for(int i=0; i<NUM_BUTTONS; i++){
+    newTime[i] = millis();
+  }
 
-  if(buttonState==HIGH && noteSend==0){
-    oldTime = newTime;
+  //button MIDI
+  if(buttonState==HIGH && noteSend[0]==0){
+    oldTime[0] = newTime[0];
     midiEventPacket_t noteOn = {0x09, 0x90 | 0, 72, 64};    
     Serial.println("Sending note on");
     MidiUSB.sendMIDI(noteOn); //sending channel0, middle C, norm. velocity
     MidiUSB.flush();
-    noteSend = 1;    
+    noteSend[0] = 1;    
     
-  }else if(buttonState==LOW && noteSend==1 && newTime-oldTime>10){
+  }else if(buttonState==LOW && noteSend[0]==1 && newTime[0]-oldTime[0]>10){
     midiEventPacket_t noteOff = {0x08, 0x80 | 0, 72, 64};
     Serial.println("Sending note off");
     MidiUSB.sendMIDI(noteOff);
     MidiUSB.flush();
-    noteSend = 0;
-    oldTime = newTime;
+    noteSend[0] = 0;
+    oldTime[0] = newTime[0];
+  }
+
+  
+  //encoder 1 button MIDI
+    if(encoder1ButtonState==HIGH && noteSend[1]==0){
+    oldTime[1] = newTime[1];
+    midiEventPacket_t noteOn = {0x09, 0x90 | 0, 74, 64};    
+    Serial.println("Sending note on");
+    MidiUSB.sendMIDI(noteOn); //sending channel0, D4, norm. velocity
+    MidiUSB.flush();
+    noteSend[1] = 1;    
+    
+  }else if(encoder1ButtonState==LOW && noteSend[1]==1 && newTime[1]-oldTime[1]>10){
+    midiEventPacket_t noteOff = {0x08, 0x80 | 0, 74, 64};
+    Serial.println("Sending note off");
+    MidiUSB.sendMIDI(noteOff);
+    MidiUSB.flush();
+    noteSend[1] = 0;
+    oldTime[1] = newTime[1];
+  }
+
+
+  //encoder 2 button MIDI
+    if(encoder2ButtonState==HIGH && noteSend[2]==0){
+    oldTime[2] = newTime[2];
+    midiEventPacket_t noteOn = {0x09, 0x90 | 0, 76, 64};    
+    Serial.println("Sending note on");
+    MidiUSB.sendMIDI(noteOn); //sending channel0, E4, norm. velocity
+    MidiUSB.flush();
+    noteSend[2] = 1;    
+    
+  }else if(encoder2ButtonState==LOW && noteSend[2]==1 && newTime[2]-oldTime[2]>10){
+    midiEventPacket_t noteOff = {0x08, 0x80 | 0, 76, 64};
+    Serial.println("Sending note off");
+    MidiUSB.sendMIDI(noteOff);
+    MidiUSB.flush();
+    noteSend[2] = 0;
+    oldTime[2] = newTime[2];
+  }
+  
+  //encoder 3 button MIDI
+    if(encoder3ButtonState==HIGH && noteSend[3]==0){
+    oldTime[3] = newTime[3];
+    midiEventPacket_t noteOn = {0x09, 0x90 | 0, 79, 64};    
+    Serial.println("Sending note on");
+    MidiUSB.sendMIDI(noteOn); //sending channel0, G4, norm. velocity
+    MidiUSB.flush();
+    noteSend[3] = 1;    
+    
+  }else if(encoder3ButtonState==LOW && noteSend[3]==1 && newTime[3]-oldTime[3]>10){
+    midiEventPacket_t noteOff = {0x08, 0x80 | 0, 79, 64};
+    Serial.println("Sending note off");
+    MidiUSB.sendMIDI(noteOff);
+    MidiUSB.flush();
+    noteSend[3] = 0;
+    oldTime[3] = newTime[3];
   }
   
   /*
@@ -117,11 +190,7 @@ void loop() {
     noteSend = 0;
     oldTime = newTime;
   }
-  */
-
-  
-
-  
+  */ 
 }
 
 // Fill the dots one after the other with a color
