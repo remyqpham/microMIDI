@@ -101,7 +101,7 @@ void loop() {
   }
 
   //button MIDI
-  if(buttonState==HIGH && noteSend[0]==0){
+  if(buttonState==HIGH && noteSend[0]==0 && newTime[0]-oldTime[0]>DEBOUNCE){
     oldTime[0] = newTime[0];
     midiEventPacket_t noteOn = {0x09, 0x90 | 0, 72, 64};    
     Serial.println("Sending note on");
@@ -120,7 +120,7 @@ void loop() {
 
   
   //encoder 1 button MIDI
-    if(encoder1ButtonState==HIGH && noteSend[1]==0){
+    if(encoder1ButtonState==HIGH && noteSend[1]==0 && newTime[1]-oldTime[1]>DEBOUNCE){
     oldTime[1] = newTime[1];
     midiEventPacket_t noteOn = {0x09, 0x90 | 0, 74, 64};    
     Serial.println("Sending note on");
@@ -139,7 +139,7 @@ void loop() {
 
 
   //encoder 2 button MIDI
-    if(encoder2ButtonState==HIGH && noteSend[2]==0){
+    if(encoder2ButtonState==HIGH && noteSend[2]==0 && newTime[2]-oldTime[2]>DEBOUNCE){
     oldTime[2] = newTime[2];
     midiEventPacket_t noteOn = {0x09, 0x90 | 0, 76, 64};    
     Serial.println("Sending note on");
@@ -157,7 +157,7 @@ void loop() {
   }
   
   //encoder 3 button MIDI
-    if(encoder3ButtonState==HIGH && noteSend[3]==0){
+    if(encoder3ButtonState==HIGH && noteSend[3]==0 && newTime[3]-oldTime[3]>DEBOUNCE){
     oldTime[3] = newTime[3];
     midiEventPacket_t noteOn = {0x09, 0x90 | 0, 79, 64};    
     Serial.println("Sending note on");
