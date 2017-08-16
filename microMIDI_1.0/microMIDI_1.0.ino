@@ -11,6 +11,7 @@
 
 #define NUM_TLC59711 1
 #define NUM_BUTTONS 4
+#define DEBOUNCE 50
 
 #define data 16
 #define clock 15
@@ -108,7 +109,7 @@ void loop() {
     MidiUSB.flush();
     noteSend[0] = 1;    
     
-  }else if(buttonState==LOW && noteSend[0]==1 && newTime[0]-oldTime[0]>10){
+  }else if(buttonState==LOW && noteSend[0]==1 && newTime[0]-oldTime[0]>DEBOUNCE){
     midiEventPacket_t noteOff = {0x08, 0x80 | 0, 72, 64};
     Serial.println("Sending note off");
     MidiUSB.sendMIDI(noteOff);
@@ -127,7 +128,7 @@ void loop() {
     MidiUSB.flush();
     noteSend[1] = 1;    
     
-  }else if(encoder1ButtonState==LOW && noteSend[1]==1 && newTime[1]-oldTime[1]>10){
+  }else if(encoder1ButtonState==LOW && noteSend[1]==1 && newTime[1]-oldTime[1]>DEBOUNCE){
     midiEventPacket_t noteOff = {0x08, 0x80 | 0, 74, 64};
     Serial.println("Sending note off");
     MidiUSB.sendMIDI(noteOff);
@@ -146,7 +147,7 @@ void loop() {
     MidiUSB.flush();
     noteSend[2] = 1;    
     
-  }else if(encoder2ButtonState==LOW && noteSend[2]==1 && newTime[2]-oldTime[2]>10){
+  }else if(encoder2ButtonState==LOW && noteSend[2]==1 && newTime[2]-oldTime[2]>DEBOUNCE){
     midiEventPacket_t noteOff = {0x08, 0x80 | 0, 76, 64};
     Serial.println("Sending note off");
     MidiUSB.sendMIDI(noteOff);
@@ -164,7 +165,7 @@ void loop() {
     MidiUSB.flush();
     noteSend[3] = 1;    
     
-  }else if(encoder3ButtonState==LOW && noteSend[3]==1 && newTime[3]-oldTime[3]>10){
+  }else if(encoder3ButtonState==LOW && noteSend[3]==1 && newTime[3]-oldTime[3]>DEBOUNCE){
     midiEventPacket_t noteOff = {0x08, 0x80 | 0, 79, 64};
     Serial.println("Sending note off");
     MidiUSB.sendMIDI(noteOff);
@@ -172,26 +173,10 @@ void loop() {
     noteSend[3] = 0;
     oldTime[3] = newTime[3];
   }
-  
-  /*
-  if((newTime - oldTime)>=1500 && noteSend == 0){
-    midiEventPacket_t noteOn = {0x09, 0x90 | 0, 72, 64};
-    Serial.println("Sending note on");
-    MidiUSB.sendMIDI(noteOn); //sending channel0, middle C, norm. velocity
-    MidiUSB.flush();
-    noteSend = 1;
-    oldTime = newTime;
-  }
-  else if((newTime - oldTime)>=500 && noteSend == 1){
-    midiEventPacket_t noteOff = {0x08, 0x80 | 0, 72, 64};
-    Serial.println("Sending note off");
-    MidiUSB.sendMIDI(noteOff);
-    MidiUSB.flush();
-    noteSend = 0;
-    oldTime = newTime;
-  }
-  */ 
+
 }
+
+
 
 // Fill the dots one after the other with a color
 void colorWipe(uint16_t r, uint16_t g, uint16_t b, uint8_t wait) {
@@ -201,3 +186,5 @@ void colorWipe(uint16_t r, uint16_t g, uint16_t b, uint8_t wait) {
       delay(wait);
   }
 }
+
+
