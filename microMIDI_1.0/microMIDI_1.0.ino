@@ -21,6 +21,8 @@ const int ButtonPin [NUM_BUTTONS] = {9,8,7,6, 5, 10};
 
 int buttonState [NUM_BUTTONS]; //1 is little button, 2+3+4 are encoders for now, 5 is bank navigation (up one) and 6 is bank navi (down one)
 
+int bank = 1;
+
 Adafruit_TLC59711 tlc = Adafruit_TLC59711(1, clock, data);
 
 // Change these two numbers to the pins connected to your encoder.
@@ -49,13 +51,11 @@ void setup() {
     oldTime[i] = millis();
     pinMode(ButtonPin[i], INPUT);
   }
-
   
   for(int i=0; i<NUM_ENCODERS; i++){
     oldPosition[i]=255;//set the encoder to begin on startup in the middle of the range
     writeEncoder(i, 255);
   }
-
 
   tlc.begin();
   tlc.write();
@@ -90,15 +90,21 @@ void loop() {
       //colorWipe(pow(newPosition[i],1.5),0,0,5);
       Serial.println(str);
     }
-
-
   }
 
   //MIDI
-  for(int i=0; i<NUM_BUTTONS; i++){
+  for(int i=0; i<NUM_BUTTONS-2; i++){//ignore last two buttons for bank
     newTime[i] = millis();
     buttonInput(i);
   }
+
+  for(int i=NUM_BUTTONS-2; i<NUM_BUTTONS; i++){//bank buttons
+    newTime[i] = millis();
+    bankSelectorInput(i);
+  }
+
+  
+  
 }
 
 // Fill the dots one after the other with a color
@@ -146,8 +152,29 @@ void writeEncoder(int i, int val){
     default:
       break;
   }
-
   return;
 }
+
+void bankSelectorInput(int i){
+    if(buttonState[i]==HIGH && noteSend[i]==0 && newTime[i]-oldTime[i]>DEBOUNCE){
+      oldTime[i] = newTime[i];  
+      if(i==NUM_BUTTONS-2 && bank<16){  
+        bank=bank+1;
+        //Serial.println("testing bank UP button: on");
+        //Serial.println(bank);
+      }else if(i==NUM_BUTTONS-1 && bank>1){
+        bank=bank-1;
+        //Serial.println("testing bank DOWN button: on");
+        //Serial.println(bank);  
+      }
+      noteSend[i] = 1;  
+  }else if(buttonState[i]==LOW && noteSend[i]==1 && newTime[i]-oldTime[i]>DEBOUNCE){
+      //Serial.println("testing bank button: off");    
+      noteSend[i] = 0;
+      oldTime[i] = newTime[i];    
+  }
+}
+
+
 
 
