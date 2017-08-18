@@ -35,7 +35,6 @@ Encoder myEncC(2,4);
 //   avoid using pins with LEDs attached
 char str[50];
 
-
 long oldPosition [NUM_ENCODERS];
 
 long oldTime[NUM_BUTTONS];
@@ -43,17 +42,17 @@ long newTime[NUM_BUTTONS];
 uint8_t noteSend [NUM_BUTTONS] ;
 
 void setup() {
-  //Setting up the MIDI baud rate
-  Serial.begin(115200);
-
+  
+  Serial.begin(115200);                   //Setting up the MIDI baud rate
+  
   for(int i=0; i<NUM_BUTTONS; i++){
     noteSend[i]=newTime[i]=0;
     oldTime[i] = millis();
     pinMode(ButtonPin[i], INPUT);
   }
   
-  for(int i=0; i<NUM_ENCODERS; i++){
-    oldPosition[i]=255;//set the encoder to begin on startup in the middle of the range
+  for(int i=0; i<NUM_ENCODERS; i++){      //set the encoder to begin on startup in the middle of the range
+    oldPosition[i]=255;                   
     writeEncoder(i, 255);
   }
 
@@ -101,11 +100,10 @@ void loop() {
   for(int i=NUM_BUTTONS-2; i<NUM_BUTTONS; i++){//bank buttons
     newTime[i] = millis();
     bankSelectorInput(i);
-  }
-
-  
-  
+  }  
 }
+
+
 
 // Fill the dots one after the other with a color
 void colorWipe(uint16_t r, uint16_t g, uint16_t b, uint8_t wait) {
@@ -116,26 +114,24 @@ void colorWipe(uint16_t r, uint16_t g, uint16_t b, uint8_t wait) {
   }
 }
 
-void buttonInput(int b){
+void buttonInput(int b){//IF BANK IS CHANGED WHILE BUTTON STATE IS HIGH THE SECOND IF STATEMENT DOESN'T OCCUR. FIX
   if(buttonState[b]==HIGH && noteSend[b]==0 && newTime[b]-oldTime[b]>DEBOUNCE){
     oldTime[b] = newTime[b];
-    midiEventPacket_t noteOn = {0x09, 0x90 | 0, 79+b, 64};  //stupid test  
+    midiEventPacket_t noteOn = {0x09, 0x90 | 0, (bank*4)+b, 64};  //stupid test  
     //midiEventPacket_t noteOn = {0x0B, 0xB0 | 0, 80+b, 127}; // general purpose
     Serial.println("Sending note on");
     MidiUSB.sendMIDI(noteOn); //sending channel0, G4, norm. velocity
     MidiUSB.flush();
-    noteSend[b] = 1;    
-    
+    noteSend[b] = 1;        
   }else if(buttonState[b]==LOW && noteSend[b]==1 && newTime[b]-oldTime[b]>DEBOUNCE){
-    midiEventPacket_t noteOff = {0x08, 0x80 | 0, 79+b, 64};
+    midiEventPacket_t noteOff = {0x08, 0x80 | 0, (bank*4)+b, 64};
     //midiEventPacket_t noteOff = {0x0B, 0xB0 | 0, 80+b, 0}; //general purpose
     Serial.println("Sending note off");
     MidiUSB.sendMIDI(noteOff);
     MidiUSB.flush();
     noteSend[b] = 0;
     oldTime[b] = newTime[b];
-  }
-   
+  }   
 }
 
 void writeEncoder(int i, int val){
@@ -158,14 +154,14 @@ void writeEncoder(int i, int val){
 void bankSelectorInput(int i){
     if(buttonState[i]==HIGH && noteSend[i]==0 && newTime[i]-oldTime[i]>DEBOUNCE){
       oldTime[i] = newTime[i];  
-      if(i==NUM_BUTTONS-2 && bank<16){  
+      if(i==NUM_BUTTONS-2 && bank<16){          //"Next bank" button is second from the last
         bank=bank+1;
-        //Serial.println("testing bank UP button: on");
-        //Serial.println(bank);
-      }else if(i==NUM_BUTTONS-1 && bank>1){
+        Serial.print("Current Bank: ");
+        Serial.println(bank);
+      }else if(i==NUM_BUTTONS-1 && bank>1){     //"Previous bank" button is last
         bank=bank-1;
-        //Serial.println("testing bank DOWN button: on");
-        //Serial.println(bank);  
+        Serial.print("Current Bank: ");
+        Serial.println(bank);  
       }
       noteSend[i] = 1;  
   }else if(buttonState[i]==LOW && noteSend[i]==1 && newTime[i]-oldTime[i]>DEBOUNCE){
