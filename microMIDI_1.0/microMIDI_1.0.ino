@@ -34,7 +34,9 @@ Encoder myEncC(2, 4);
 
 char str[50];
 long oldPosition [NUM_ENCODERS];
+long newPosition [NUM_ENCODERS];
 long oldPositionTranslated [NUM_ENCODERS];
+long newPositionTranslated [NUM_ENCODERS];
 long oldTime[NUM_BUTTONS];
 long newTime[NUM_BUTTONS];
 uint8_t noteSend [NUM_BUTTONS] ;
@@ -53,6 +55,10 @@ void setup() {
     oldPosition[i] = 255;
     oldPositionTranslated[i]=(511 - oldPosition[i])/4;
     writeEncoder(i, 255);
+  }
+  
+  for(int i = 0; i<NUM_ENCODERS; i++){
+    newPositionTranslated[i] = (511-newPosition[i])/4;
   }
 
   tlc.begin();
@@ -92,17 +98,17 @@ void initializeButtons() {
 
 void initializeEncoders() {
 
-  long newPosition [NUM_ENCODERS];
-  long newPositionTranslated [NUM_ENCODERS];
+  //long newPosition [NUM_ENCODERS];
+  //long newPositionTranslated [NUM_ENCODERS];
 
   newPosition[0] = myEncA.read();
   newPosition[1] = myEncB.read();
   newPosition[2] = myEncC.read();
 
 
-  for(int i = 0; i<NUM_ENCODERS; i++){
-    newPositionTranslated[i] = (511-newPosition[i])/4;
-  }
+//  for(int i = 0; i<NUM_ENCODERS; i++){
+//    newPositionTranslated[i] = (511-newPosition[i])/4;
+//  }
 
 
   for (int i = 0; i < NUM_ENCODERS; i++) {
@@ -116,21 +122,16 @@ void initializeEncoders() {
       writeEncoder(i, 511);
     }
     
-    if (newPosition[i] != oldPosition[i]) {
-
-      
-      oldPosition[i] = newPosition[i];
-
-      
+    if (newPosition[i] != oldPosition[i]) {      
+      oldPosition[i] = newPosition[i];      
       oldPositionTranslated[i]=(511-oldPosition[i]) / 4;
-
-      if(oldPosition[i]%4==3){
+  
+      if(oldPosition[i]%4==3 && newPositionTranslated[i]!=oldPositionTranslated[i]){//filter out extraneous outputs. 3 chosen for end of notch
         sprintf(str, "oldPositionTranslated[%d] = %d\n", i, oldPositionTranslated[i]); //
         Serial.println(str);  
+        newPositionTranslated[i]=oldPositionTranslated[i];
               
       }
-
-
     }
   }
 }
