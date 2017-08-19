@@ -73,7 +73,6 @@ void loop() {
   readButtons();
   readBankSelector();
 
-  //readEncoders(); //to implement
 }
 
 void readButtons() {  //MIDI
@@ -98,18 +97,9 @@ void initializeButtons() {
 
 void initializeEncoders() {
 
-  //long newPosition [NUM_ENCODERS];
-  //long newPositionTranslated [NUM_ENCODERS];
-
   newPosition[0] = myEncA.read();
   newPosition[1] = myEncB.read();
   newPosition[2] = myEncC.read();
-
-
-//  for(int i = 0; i<NUM_ENCODERS; i++){
-//    newPositionTranslated[i] = (511-newPosition[i])/4;
-//  }
-
 
   for (int i = 0; i < NUM_ENCODERS; i++) {
     if (newPosition[i] < 0) {
@@ -120,17 +110,18 @@ void initializeEncoders() {
       newPosition[i] = 511;
       newPositionTranslated[i]=(511-newPosition[i])/4;
       writeEncoder(i, 511);
-    }
-    
+    }    
     if (newPosition[i] != oldPosition[i]) {      
       oldPosition[i] = newPosition[i];      
-      oldPositionTranslated[i]=(511-oldPosition[i]) / 4;
-  
+      oldPositionTranslated[i]=(511-oldPosition[i]) / 4;  
       if(oldPosition[i]%4==3 && newPositionTranslated[i]!=oldPositionTranslated[i]){//filter out extraneous outputs. 3 chosen for end of notch
-        sprintf(str, "oldPositionTranslated[%d] = %d\n", i, oldPositionTranslated[i]); //
+        sprintf(str, "oldPositionTranslated[%d] = %d\n", i, oldPositionTranslated[i]); //oldPositionTranslated[i] is the desired value
         Serial.println(str);  
         newPositionTranslated[i]=oldPositionTranslated[i];
-              
+
+        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank-1)*4+i, 1, oldPositionTranslated[i]};      //works  
+        MidiUSB.sendMIDI(controlChange);        
+        MidiUSB.flush();      
       }
     }
   }
