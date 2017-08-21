@@ -14,6 +14,10 @@
 #define DEBOUNCE 50
 #define data 16
 #define clock 15
+#define ORIGINAL 0
+#define TRANSLATED 1
+#define OLD 0
+#define NEW 1
 
 const int ButtonPin [NUM_BUTTONS] = {9, 8, 7, 6, 5, 10};
 int buttonState [NUM_BUTTONS]; //1 is little button, 2+3+4 are encoders for now, 5 is bank navigation (up one) and 6 is bank navi (down one)
@@ -33,10 +37,7 @@ Encoder myEncC(2, 4);
 //   avoid using pins with LEDs attached
 
 char str[50];
-long oldPosition [NUM_ENCODERS];
-long newPosition [NUM_ENCODERS];
-long oldPositionTranslated [NUM_ENCODERS];
-long newPositionTranslated [NUM_ENCODERS];
+long encPosition [2][NUM_ENCODERS][2];
 long oldTime[NUM_BUTTONS];
 long newTime[NUM_BUTTONS];
 uint8_t noteSend [NUM_BUTTONS] ;
@@ -52,13 +53,13 @@ void setup() {
   }
 
   for (int i = 0; i < NUM_ENCODERS; i++) { //set the encoder to begin on startup in the middle of the range
-    oldPosition[i] = 255;
-    oldPositionTranslated[i]=(511 - oldPosition[i])/4;
+    encPosition[OLD][i][ORIGINAL] = 255;
+    encPosition[OLD][i][TRANSLATED]=(511 - encPosition[OLD][i][ORIGINAL])/4;
     writeEncoder(i, 255);
   }
   
   for(int i = 0; i<NUM_ENCODERS; i++){
-    newPositionTranslated[i] = (511-newPosition[i])/4;
+    encPosition[NEW][i][TRANSLATED] = (511-encPosition[NEW][i][ORIGINAL])/4;
   }
 
   tlc.begin();
@@ -97,29 +98,29 @@ void initializeButtons() {
 
 void initializeEncoders() {
 
-  newPosition[0] = myEncA.read();
-  newPosition[1] = myEncB.read();
-  newPosition[2] = myEncC.read();
+  encPosition[NEW][0][ORIGINAL] = myEncA.read();
+  encPosition[NEW][1][ORIGINAL] = myEncB.read();
+  encPosition[NEW][2][ORIGINAL] = myEncC.read();  
 
   for (int i = 0; i < NUM_ENCODERS; i++) {
-    if (newPosition[i] < 0) {
-      newPosition[i] = 0;
-      newPositionTranslated[i] = 0;
+    if (encPosition[NEW][i][ORIGINAL] < 0) {
+      encPosition[NEW][i][ORIGINAL] = 0;
+      encPosition[NEW][i][TRANSLATED] = 0;
       writeEncoder(i, 0);
-    } else if (newPosition[i] > 511) {
-      newPosition[i] = 511;
-      newPositionTranslated[i]=(511-newPosition[i])/4;
+    } else if (encPosition[NEW][i][ORIGINAL] > 511) {
+      encPosition[NEW][i][ORIGINAL] = 511;
+      encPosition[NEW][i][TRANSLATED]=(511-encPosition[NEW][i][ORIGINAL])/4;
       writeEncoder(i, 511);
     }    
-    if (newPosition[i] != oldPosition[i]) {      
-      oldPosition[i] = newPosition[i];      
-      oldPositionTranslated[i]=(511-oldPosition[i]) / 4;  
-      if(oldPosition[i]%4==3 && newPositionTranslated[i]!=oldPositionTranslated[i]){//filter out extraneous outputs. 3 chosen for end of notch
-        sprintf(str, "oldPositionTranslated[%d] = %d\n", i, oldPositionTranslated[i]); //oldPositionTranslated[i] is the desired value
+    if (encPosition[NEW][i][ORIGINAL] != encPosition[OLD][i][ORIGINAL]) {      
+      encPosition[OLD][i][ORIGINAL] = encPosition[NEW][i][ORIGINAL];      
+      encPosition[OLD][i][TRANSLATED]=(511-encPosition[OLD][i][ORIGINAL]) / 4;  
+      if(encPosition[OLD][i][ORIGINAL]%4==3 && encPosition[NEW][i][TRANSLATED]!=encPosition[OLD][i][TRANSLATED]){//filter out extraneous outputs. 3 chosen for end of notch
+        sprintf(str, "encPosition[OLD][%d][TRANSLATED] = %d\n", i, encPosition[OLD][i][TRANSLATED]); //encPosition[OLD][i][TRANSLATED] is the desired value
         Serial.println(str);  
-        newPositionTranslated[i]=oldPositionTranslated[i];
+        encPosition[NEW][i][TRANSLATED]=encPosition[OLD][i][TRANSLATED];
 
-        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank-1)*4+i, 1, oldPositionTranslated[i]};      //works  
+        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank-1)*4+i, 1, encPosition[OLD][i][TRANSLATED]};      //works  
         MidiUSB.sendMIDI(controlChange);        
         MidiUSB.flush();      
       }
