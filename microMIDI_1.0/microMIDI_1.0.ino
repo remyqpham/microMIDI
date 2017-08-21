@@ -11,6 +11,7 @@
 #define NUM_TLC59711 1
 #define NUM_BUTTONS 6
 #define NUM_ENCODERS 3 //to be changed to four later
+#define NUM_BANKS 16
 #define DEBOUNCE 50
 #define data 16
 #define clock 15
@@ -54,12 +55,12 @@ void setup() {
 
   for (int i = 0; i < NUM_ENCODERS; i++) { //set the encoder to begin on startup in the middle of the range
     encPosition[OLD][i][ORIGINAL] = 255;
-    encPosition[OLD][i][TRANSLATED]=(511 - encPosition[OLD][i][ORIGINAL])/4;
+    encPosition[OLD][i][TRANSLATED] = (511 - encPosition[OLD][i][ORIGINAL]) / 4;
     writeEncoder(i, 255);
   }
-  
-  for(int i = 0; i<NUM_ENCODERS; i++){
-    encPosition[NEW][i][TRANSLATED] = (511-encPosition[NEW][i][ORIGINAL])/4;
+
+  for (int i = 0; i < NUM_ENCODERS; i++) {
+    encPosition[NEW][i][TRANSLATED] = (511 - encPosition[NEW][i][ORIGINAL]) / 4;
   }
 
   tlc.begin();
@@ -100,7 +101,7 @@ void initializeEncoders() {
 
   encPosition[NEW][0][ORIGINAL] = myEncA.read();
   encPosition[NEW][1][ORIGINAL] = myEncB.read();
-  encPosition[NEW][2][ORIGINAL] = myEncC.read();  
+  encPosition[NEW][2][ORIGINAL] = myEncC.read();
 
   for (int i = 0; i < NUM_ENCODERS; i++) {
     if (encPosition[NEW][i][ORIGINAL] < 0) {
@@ -109,20 +110,20 @@ void initializeEncoders() {
       writeEncoder(i, 0);
     } else if (encPosition[NEW][i][ORIGINAL] > 511) {
       encPosition[NEW][i][ORIGINAL] = 511;
-      encPosition[NEW][i][TRANSLATED]=(511-encPosition[NEW][i][ORIGINAL])/4;
+      encPosition[NEW][i][TRANSLATED] = (511 - encPosition[NEW][i][ORIGINAL]) / 4;
       writeEncoder(i, 511);
-    }    
-    if (encPosition[NEW][i][ORIGINAL] != encPosition[OLD][i][ORIGINAL]) {      
-      encPosition[OLD][i][ORIGINAL] = encPosition[NEW][i][ORIGINAL];      
-      encPosition[OLD][i][TRANSLATED]=(511-encPosition[OLD][i][ORIGINAL]) / 4;  
-      if(encPosition[OLD][i][ORIGINAL]%4==3 && encPosition[NEW][i][TRANSLATED]!=encPosition[OLD][i][TRANSLATED]){//filter out extraneous outputs. 3 chosen for end of notch
-        sprintf(str, "encPosition[OLD][%d][TRANSLATED] = %d\n", i, encPosition[OLD][i][TRANSLATED]); //encPosition[OLD][i][TRANSLATED] is the desired value
-        Serial.println(str);  
-        encPosition[NEW][i][TRANSLATED]=encPosition[OLD][i][TRANSLATED];
+    }
+    if (encPosition[NEW][i][ORIGINAL] != encPosition[OLD][i][ORIGINAL]) {
+      encPosition[OLD][i][ORIGINAL] = encPosition[NEW][i][ORIGINAL];
+      encPosition[OLD][i][TRANSLATED] = (511 - encPosition[OLD][i][ORIGINAL]) / 4;
+      if (encPosition[OLD][i][ORIGINAL] % 4 == 3 && encPosition[NEW][i][TRANSLATED] != encPosition[OLD][i][TRANSLATED]) { //filter out extraneous outputs. 3 chosen for end of notch
+        sprintf(str, "Bank #%d        Encoder #%d's value = %d", bank, i, encPosition[OLD][i][TRANSLATED]); //encPosition[OLD][i][TRANSLATED] is the desired value
+        Serial.println(str);
+        encPosition[NEW][i][TRANSLATED] = encPosition[OLD][i][TRANSLATED];
 
-        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank-1)*4+i, 1, encPosition[OLD][i][TRANSLATED]};      //works  
-        MidiUSB.sendMIDI(controlChange);        
-        MidiUSB.flush();      
+        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED]}; //works
+        MidiUSB.sendMIDI(controlChange);
+        MidiUSB.flush();
       }
     }
   }
@@ -140,14 +141,12 @@ void buttonInput(int b) {         //IF BANK IS CHANGED WHILE BUTTON STATE IS HIG
   if (buttonState[b] == HIGH && noteSend[b] == 0 && newTime[b] - oldTime[b] > DEBOUNCE) {
     oldTime[b] = newTime[b];
     midiEventPacket_t noteOn = {0x09, 0x90 | 0, (bank * 4) + b, 64}; //plays a certain note based on bank value
-    //midiEventPacket_t noteOn = {0x0B, 0xB0 | 0, 80+b, 127}; // general purpose **doesn't toggle like a note does for some reason
     Serial.println("Sending note on");
     MidiUSB.sendMIDI(noteOn); //sending channel0, G4, norm. velocity
     MidiUSB.flush();
     noteSend[b] = 1;
   } else if (buttonState[b] == LOW && noteSend[b] == 1 && newTime[b] - oldTime[b] > DEBOUNCE) {
     midiEventPacket_t noteOff = {0x08, 0x80 | 0, (bank * 4) + b, 64};
-    //midiEventPacket_t noteOff = {0x0B, 0xB0 | 0, 80+b, 0}; //general purpose
     Serial.println("Sending note off");
     MidiUSB.sendMIDI(noteOff);
     MidiUSB.flush();
