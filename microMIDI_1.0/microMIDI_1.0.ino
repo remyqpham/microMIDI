@@ -38,7 +38,7 @@ Encoder myEncC(2, 4);
 //   avoid using pins with LEDs attached
 
 char str[50];
-long encPosition [2][NUM_ENCODERS][2];
+long encPosition [2][NUM_ENCODERS][2][NUM_BANKS+1];//encPosition[OLD or NEW value][which encoder is sending data, referred to as 'i'][ORIGINAL or TRANSLATED value][bank indicator 1-16 (0 is original bank)]
 long oldTime[NUM_BUTTONS];
 long newTime[NUM_BUTTONS];
 uint8_t noteSend [NUM_BUTTONS] ;
@@ -54,14 +54,15 @@ void setup() {
   }
 
   for (int i = 0; i < NUM_ENCODERS; i++) { //set the encoder to begin on startup in the middle of the range
-    encPosition[OLD][i][ORIGINAL] = 255;
-    encPosition[OLD][i][TRANSLATED] = (511 - encPosition[OLD][i][ORIGINAL]) / 4;
-    writeEncoder(i, 255);
+    for (int b = 0; b < NUM_BANKS+1; b++){ // da whole damn array gets filled yo
+      encPosition[OLD][i][ORIGINAL][b] = 255;
+      encPosition[OLD][i][TRANSLATED][b] = (511 - encPosition[OLD][i][ORIGINAL][b]) / 4;
+
+      encPosition[NEW][i][TRANSLATED][b] = (511 - encPosition[NEW][i][ORIGINAL][b]) / 4;
+      writeEncoder(i, 255);
+    }
   }
 
-  for (int i = 0; i < NUM_ENCODERS; i++) {
-    encPosition[NEW][i][TRANSLATED] = (511 - encPosition[NEW][i][ORIGINAL]) / 4;
-  }
 
   tlc.begin();
   tlc.write();
@@ -99,32 +100,44 @@ void initializeButtons() {
 
 void initializeEncoders() {
 
-  encPosition[NEW][0][ORIGINAL] = myEncA.read();
-  encPosition[NEW][1][ORIGINAL] = myEncB.read();
-  encPosition[NEW][2][ORIGINAL] = myEncC.read();
+  encPosition[NEW][0][ORIGINAL][0] = myEncA.read();
+  encPosition[NEW][1][ORIGINAL][0] = myEncB.read();
+  encPosition[NEW][2][ORIGINAL][0] = myEncC.read();
 
   for (int i = 0; i < NUM_ENCODERS; i++) {
-    if (encPosition[NEW][i][ORIGINAL] < 0) {
-      encPosition[NEW][i][ORIGINAL] = 0;
-      encPosition[NEW][i][TRANSLATED] = 0;
+    if (encPosition[NEW][i][ORIGINAL][0] < 0) {
+      encPosition[NEW][i][ORIGINAL][0] = 0;
+      encPosition[NEW][i][TRANSLATED][0] = 0;
       writeEncoder(i, 0);
-    } else if (encPosition[NEW][i][ORIGINAL] > 511) {
-      encPosition[NEW][i][ORIGINAL] = 511;
-      encPosition[NEW][i][TRANSLATED] = (511 - encPosition[NEW][i][ORIGINAL]) / 4;
+    } else if (encPosition[NEW][i][ORIGINAL][0] > 511) {
+      encPosition[NEW][i][ORIGINAL][0] = 511;
+      encPosition[NEW][i][TRANSLATED][0] = (511 - encPosition[NEW][i][ORIGINAL][0]) / 4;
       writeEncoder(i, 511);
     }
-    if (encPosition[NEW][i][ORIGINAL] != encPosition[OLD][i][ORIGINAL]) {
-      encPosition[OLD][i][ORIGINAL] = encPosition[NEW][i][ORIGINAL];
-      encPosition[OLD][i][TRANSLATED] = (511 - encPosition[OLD][i][ORIGINAL]) / 4;
-      if (encPosition[OLD][i][ORIGINAL] % 4 == 3 && encPosition[NEW][i][TRANSLATED] != encPosition[OLD][i][TRANSLATED]) { //filter out extraneous outputs. 3 chosen for end of notch
-        sprintf(str, "Bank #%d        Encoder #%d's value = %d", bank, i, encPosition[OLD][i][TRANSLATED]); //encPosition[OLD][i][TRANSLATED] is the desired value
-        Serial.println(str);
-        encPosition[NEW][i][TRANSLATED] = encPosition[OLD][i][TRANSLATED];
+    if (encPosition[NEW][i][ORIGINAL][0] != encPosition[OLD][i][ORIGINAL][0]) {
+      
 
-        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED]}; //works
+      sprintf(str, "encoder new position = %d\n", encPosition[NEW][i][ORIGINAL][0]);
+      Serial.println(str);
+      
+      encPosition[OLD][i][ORIGINAL][0] = encPosition[NEW][i][ORIGINAL][0];
+      encPosition[OLD][i][TRANSLATED][0] = (511 - encPosition[OLD][i][ORIGINAL][0]) / 4;
+      
+      
+      
+      if (encPosition[NEW][i][ORIGINAL][0] % 4 == 3 && encPosition[NEW][i][TRANSLATED][0] != encPosition[OLD][i][TRANSLATED][0]) { //filter out extraneous outputs. 3 chosen for end of notch
+        sprintf(str, "Bank #%d        Encoder #%d's value = %d", bank, i, encPosition[OLD][i][TRANSLATED][0]); //encPosition[OLD][i][TRANSLATED] is the desired value
+        Serial.println(str);
+        encPosition[NEW][i][TRANSLATED][0] = encPosition[OLD][i][TRANSLATED][0];
+
+        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED][0]}; //works
         MidiUSB.sendMIDI(controlChange);
         MidiUSB.flush();
       }
+
+
+
+      
     }
   }
 }
