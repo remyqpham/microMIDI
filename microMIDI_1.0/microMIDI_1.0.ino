@@ -59,7 +59,7 @@ void setup() {
       encPosition[OLD][i][TRANSLATED][b] = (511 - encPosition[OLD][i][ORIGINAL][b]) / 4;
 
       encPosition[NEW][i][TRANSLATED][b] = (511 - encPosition[NEW][i][ORIGINAL][b]) / 4;
-      writeEncoder(i, 255);
+      writeEncoder(i, 255);//initial encoder value (original)
     }
   }
 
@@ -89,6 +89,8 @@ void readBankSelector() {
   for (int i = NUM_BUTTONS - 2; i < NUM_BUTTONS; i++) { //bank buttons
     newTime[i] = millis();
     bankSelectorInput(i);
+
+    
   }
 }
 
@@ -97,40 +99,62 @@ void initializeButtons() {
     buttonState[i] = digitalRead(ButtonPin[i]);
   }
 }
-
+int test = 0;
 void initializeEncoders() {
 
-  encPosition[NEW][0][ORIGINAL][0] = myEncA.read();
-  encPosition[NEW][1][ORIGINAL][0] = myEncB.read();
-  encPosition[NEW][2][ORIGINAL][0] = myEncC.read();
+
+//    sprintf(str, "myEncA.read() = %d\n", myEncA.read());
+//    Serial.println(str); 
+
+
+//  for(int i=0; i<NUM_ENCODERS; i++){
+//    writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   //put this in bank selector??
+//  }
+
+  encPosition[NEW][0][ORIGINAL][bank] = myEncA.read();
+  encPosition[NEW][1][ORIGINAL][bank] = myEncB.read();
+  encPosition[NEW][2][ORIGINAL][bank] = myEncC.read();
+
+//set bank 0 to original
+
+//writeencoder?
 
   for (int i = 0; i < NUM_ENCODERS; i++) {
-    if (encPosition[NEW][i][ORIGINAL][0] < 0) {
-      encPosition[NEW][i][ORIGINAL][0] = 0;
-      encPosition[NEW][i][TRANSLATED][0] = 0;
+    if (encPosition[NEW][i][ORIGINAL][bank] < 0) {
+      encPosition[NEW][i][ORIGINAL][bank] = 0;
+      encPosition[NEW][i][TRANSLATED][bank] = 0;
       writeEncoder(i, 0);
-    } else if (encPosition[NEW][i][ORIGINAL][0] > 511) {
-      encPosition[NEW][i][ORIGINAL][0] = 511;
-      encPosition[NEW][i][TRANSLATED][0] = (511 - encPosition[NEW][i][ORIGINAL][0]) / 4;
+    } else if (encPosition[NEW][i][ORIGINAL][bank] > 511) {
+      encPosition[NEW][i][ORIGINAL][bank] = 511;
+      encPosition[NEW][i][TRANSLATED][bank] = (511 - encPosition[NEW][i][ORIGINAL][bank]) / 4;
       writeEncoder(i, 511);
     }
-    if (encPosition[NEW][i][ORIGINAL][0] != encPosition[OLD][i][ORIGINAL][0]) {
+
+
+    //at this point you know that the ORIGINAL value is between 0 and 511
+    
+    if (encPosition[NEW][i][ORIGINAL][bank] != encPosition[OLD][i][ORIGINAL][bank]) {
       
 
-      sprintf(str, "encoder new position = %d\n", encPosition[NEW][i][ORIGINAL][0]);
-      Serial.println(str);
+      //sprintf(str, "encoder new position = %d\n", encPosition[NEW][i][ORIGINAL][bank]);
+      //Serial.println(str);
       
-      encPosition[OLD][i][ORIGINAL][0] = encPosition[NEW][i][ORIGINAL][0];
-      encPosition[OLD][i][TRANSLATED][0] = (511 - encPosition[OLD][i][ORIGINAL][0]) / 4;
+      encPosition[OLD][i][ORIGINAL][bank] = encPosition[NEW][i][ORIGINAL][bank];
+      encPosition[OLD][i][TRANSLATED][bank] = (511 - encPosition[OLD][i][ORIGINAL][bank]) / 4;
       
       
       
-      if (encPosition[NEW][i][ORIGINAL][0] % 4 == 3 && encPosition[NEW][i][TRANSLATED][0] != encPosition[OLD][i][TRANSLATED][0]) { //filter out extraneous outputs. 3 chosen for end of notch
-        sprintf(str, "Bank #%d        Encoder #%d's value = %d", bank, i, encPosition[OLD][i][TRANSLATED][0]); //encPosition[OLD][i][TRANSLATED] is the desired value
+      if (encPosition[NEW][i][ORIGINAL][bank] % 4 == 3 && encPosition[NEW][i][TRANSLATED][bank] != encPosition[OLD][i][TRANSLATED][bank]) { //filter out extraneous outputs. 3 chosen for end of notch
+        
+        
+        sprintf(str, "Bank #%d        Encoder #%d's value = %d", bank, i, encPosition[OLD][i][TRANSLATED][bank]); //encPosition[OLD][i][TRANSLATED] is the desired value
         Serial.println(str);
-        encPosition[NEW][i][TRANSLATED][0] = encPosition[OLD][i][TRANSLATED][0];
+        encPosition[NEW][i][TRANSLATED][bank] = encPosition[OLD][i][TRANSLATED][bank];
 
-        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED][0]}; //works
+        
+        
+        //midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED][0]}; //works
+        midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED][bank]}; //push value in that particular bank
         MidiUSB.sendMIDI(controlChange);
         MidiUSB.flush();
       }
@@ -192,10 +216,20 @@ void bankSelectorInput(int i) {
       bank = bank + 1;
       Serial.print("Current Bank: ");
       Serial.println(bank);
+
+    for(int i=0; i<NUM_ENCODERS; i++){
+      writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   //put this in bank selector??
+    }
+      
     } else if (i == NUM_BUTTONS - 1 && bank > 1) { //"Previous bank" button is last
       bank = bank - 1;
       Serial.print("Current Bank: ");
       Serial.println(bank);
+      
+      for(int i=0; i<NUM_ENCODERS; i++){
+        writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   //put this in bank selector??
+      }
+      
     }
     noteSend[i] = 1;
   } else if (buttonState[i] == LOW && noteSend[i] == 1 && newTime[i] - oldTime[i] > DEBOUNCE) {
