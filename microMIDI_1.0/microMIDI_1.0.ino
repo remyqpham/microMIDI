@@ -88,9 +88,7 @@ void readButtons() {  //MIDI
 void readBankSelector() {
   for (int i = NUM_BUTTONS - 2; i < NUM_BUTTONS; i++) { //bank buttons
     newTime[i] = millis();
-    bankSelectorInput(i);
-
-    
+    bankSelectorInput(i);    
   }
 }
 
@@ -102,24 +100,11 @@ void initializeButtons() {
 int test = 0;
 void initializeEncoders() {
 
-
-//    sprintf(str, "myEncA.read() = %d\n", myEncA.read());
-//    Serial.println(str); 
-
-
-//  for(int i=0; i<NUM_ENCODERS; i++){
-//    writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   //put this in bank selector??
-//  }
-
   encPosition[NEW][0][ORIGINAL][bank] = myEncA.read();
   encPosition[NEW][1][ORIGINAL][bank] = myEncB.read();
   encPosition[NEW][2][ORIGINAL][bank] = myEncC.read();
 
-//set bank 0 to original
-
-//writeencoder?
-
-  for (int i = 0; i < NUM_ENCODERS; i++) {
+  for (int i = 0; i < NUM_ENCODERS; i++) {          //constrain the values
     if (encPosition[NEW][i][ORIGINAL][bank] < 0) {
       encPosition[NEW][i][ORIGINAL][bank] = 0;
       encPosition[NEW][i][TRANSLATED][bank] = 0;
@@ -129,39 +114,22 @@ void initializeEncoders() {
       encPosition[NEW][i][TRANSLATED][bank] = (511 - encPosition[NEW][i][ORIGINAL][bank]) / 4;
       writeEncoder(i, 511);
     }
-
-
-    //at this point you know that the ORIGINAL value is between 0 and 511
-    
+   
     if (encPosition[NEW][i][ORIGINAL][bank] != encPosition[OLD][i][ORIGINAL][bank]) {
-      
-
-      //sprintf(str, "encoder new position = %d\n", encPosition[NEW][i][ORIGINAL][bank]);
-      //Serial.println(str);
       
       encPosition[OLD][i][ORIGINAL][bank] = encPosition[NEW][i][ORIGINAL][bank];
       encPosition[OLD][i][TRANSLATED][bank] = (511 - encPosition[OLD][i][ORIGINAL][bank]) / 4;
-      
-      
-      
+           
       if (encPosition[NEW][i][ORIGINAL][bank] % 4 == 3 && encPosition[NEW][i][TRANSLATED][bank] != encPosition[OLD][i][TRANSLATED][bank]) { //filter out extraneous outputs. 3 chosen for end of notch
-        
-        
+              
         sprintf(str, "Bank #%d        Encoder #%d's value = %d", bank, i, encPosition[OLD][i][TRANSLATED][bank]); //encPosition[OLD][i][TRANSLATED] is the desired value
         Serial.println(str);
-        encPosition[NEW][i][TRANSLATED][bank] = encPosition[OLD][i][TRANSLATED][bank];
-
+        encPosition[NEW][i][TRANSLATED][bank] = encPosition[OLD][i][TRANSLATED][bank];      
         
-        
-        //midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED][0]}; //works
         midiEventPacket_t controlChange = {0x0B, 0xB0 | (bank - 1) * 4 + i, 1, encPosition[OLD][i][TRANSLATED][bank]}; //push value in that particular bank
         MidiUSB.sendMIDI(controlChange);
         MidiUSB.flush();
-      }
-
-
-
-      
+      }      
     }
   }
 }
@@ -216,25 +184,26 @@ void bankSelectorInput(int i) {
       bank = bank + 1;
       Serial.print("Current Bank: ");
       Serial.println(bank);
-
-    for(int i=0; i<NUM_ENCODERS; i++){
-      writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   //put this in bank selector??
-    }
+      updateEncoders(); 
       
     } else if (i == NUM_BUTTONS - 1 && bank > 1) { //"Previous bank" button is last
       bank = bank - 1;
       Serial.print("Current Bank: ");
       Serial.println(bank);
-      
-      for(int i=0; i<NUM_ENCODERS; i++){
-        writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   //put this in bank selector??
-      }
-      
+      updateEncoders();
     }
     noteSend[i] = 1;
   } else if (buttonState[i] == LOW && noteSend[i] == 1 && newTime[i] - oldTime[i] > DEBOUNCE) {
-    //Serial.println("testing bank button: off");
-    noteSend[i] = 0;
-    oldTime[i] = newTime[i];
+      noteSend[i] = 0;
+      oldTime[i] = newTime[i];
   }
 }
+
+
+/*Bring the encoders up to date with the current bank.  Called in bankSelectorInput()*/
+void updateEncoders(){
+    for(int i=0; i<NUM_ENCODERS; i++){
+      writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   
+    }
+}
+
