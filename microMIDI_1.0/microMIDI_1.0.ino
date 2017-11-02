@@ -3,14 +3,12 @@
    Patrick Ayers
 */
 
-#include "Adafruit_TLC59711.h"
 #include "MIDIUSB.h"
 #include <Encoder.h>
 #include <SPI.h>
 
-#define NUM_TLC59711 1
 #define NUM_BUTTONS 6
-#define NUM_ENCODERS 3 //to be changed to four later
+#define NUM_ENCODERS 4 //to be changed to four later
 #define NUM_BANKS 16
 #define DEBOUNCE 50
 #define data 16
@@ -24,16 +22,15 @@ const int ButtonPin [NUM_BUTTONS] = {9, 8, 7, 6, 5, 10};
 int buttonState [NUM_BUTTONS]; //1 is little button, 2+3+4 are encoders for now, 5 is bank navigation (up one) and 6 is bank navi (down one)
 int bank = 1;
 
-Adafruit_TLC59711 tlc = Adafruit_TLC59711(1, clock, data);
-
 // Change these two numbers to the pins connected to your encoder.
 //   Best Performance: both pins have interrupt capability
 //   Good Performance: only the first pin has interrupt capability
 //   Low Performance:  neither pin has interrupt capability
 
-Encoder myEncA(1, 14);
-Encoder myEncB(0, A0);
-Encoder myEncC(2, 4);
+Encoder myEncA(0, 10);
+Encoder myEncB(1, 9);
+Encoder myEncC(2, 8);
+Encoder myEncD(3, 6);
 
 //   avoid using pins with LEDs attached
 
@@ -57,15 +54,10 @@ void setup() {
     for (int b = 0; b < NUM_BANKS+1; b++){ // da whole damn array gets filled yo
       encPosition[OLD][i][ORIGINAL][b] = 255;
       encPosition[OLD][i][TRANSLATED][b] = (511 - encPosition[OLD][i][ORIGINAL][b]) / 4;
-
       encPosition[NEW][i][TRANSLATED][b] = (511 - encPosition[NEW][i][ORIGINAL][b]) / 4;
       writeEncoder(i, 255);//initial encoder value (original)
     }
   }
-
-
-  tlc.begin();
-  tlc.write();
 }
 
 void loop() {
@@ -97,12 +89,13 @@ void initializeButtons() {
     buttonState[i] = digitalRead(ButtonPin[i]);
   }
 }
-int test = 0;
+//int test = 0;
 void initializeEncoders() {
 
   encPosition[NEW][0][ORIGINAL][bank] = myEncA.read();
   encPosition[NEW][1][ORIGINAL][bank] = myEncB.read();
   encPosition[NEW][2][ORIGINAL][bank] = myEncC.read();
+  encPosition[NEW][3][ORIGINAL][bank] = myEncD.read();
 
   for (int i = 0; i < NUM_ENCODERS; i++) {          //constrain the values
     if (encPosition[NEW][i][ORIGINAL][bank] < 0) {
@@ -131,14 +124,6 @@ void initializeEncoders() {
         MidiUSB.flush();
       }      
     }
-  }
-}
-// Fill the dots one after the other with a color
-void colorWipe(uint16_t r, uint16_t g, uint16_t b, uint8_t wait) {
-  for (uint16_t i = 0; i < 8 * NUM_TLC59711; i++) {
-    tlc.setLED(i, r, g, b);
-    tlc.write();
-    delay(wait);
   }
 }
 
@@ -171,6 +156,8 @@ void writeEncoder(int i, int val) {
     case 2:
       myEncC.write(val);
       break;
+    case 3:
+      myEncD.write(val);
     default:
       break;
   }
@@ -199,11 +186,9 @@ void bankSelectorInput(int i) {
   }
 }
 
-
 /*Bring the encoders up to date with the current bank.  Called in bankSelectorInput()*/
 void updateEncoders(){
     for(int i=0; i<NUM_ENCODERS; i++){
       writeEncoder(i, encPosition[OLD][i][ORIGINAL][bank]); //reset encoders to current bank values   
     }
 }
-
